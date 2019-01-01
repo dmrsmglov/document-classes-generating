@@ -5,11 +5,11 @@ import java.util.List;
 import java.util.Map;
 
 public class ClassAnalyzer {
-    PsiClass psiClass;
-    Map<String, List<String>> classInfo = new HashMap<>();
+    private PsiClass aClass;
+    private Map<String, List<String>> classInfo = new HashMap<>();
 
-    public ClassAnalyzer(PsiClass psiClass) {
-        this.psiClass = psiClass;
+    ClassAnalyzer(PsiClass aClass) {
+        this.aClass = aClass;
     }
 
     private void analyze() {
