@@ -4,8 +4,6 @@ import com.itextpdf.text.pdf.PdfWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -50,8 +48,6 @@ public class PdfComposer {
 
     void compose(Map<String, List<String>> classInfo, String basePath) {
         initialize(classInfo.get("name") + ".pdf");
-        Font titleFont = FontFactory.getFont(FontFactory.COURIER_BOLD, 16, BaseColor.BLACK);
-        Font basicFont = FontFactory.getFont(FontFactory.COURIER, 10, BaseColor.BLACK);
         try {
             document.addTitle(classInfo.get("name").get(0));
             Paragraph modifiers = composeParagraph(classInfo.get("modifiers"));
