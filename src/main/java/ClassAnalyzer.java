@@ -1,7 +1,4 @@
-import com.intellij.psi.PsiAnnotation;
-import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiClassType;
-import com.intellij.psi.PsiMethod;
+import com.intellij.psi.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -41,6 +38,20 @@ public class ClassAnalyzer {
             classInfo.put("methods", casualMethods);
     }
 
+    private void analyzeFields() {
+        PsiField[] fields = aClass.getFields();
+        classInfo.put("fields", Arrays.stream(aClass.getFields())
+                                        .map(PsiField::getName)
+                                        .collect(Collectors.toList()));
+        for (PsiField field : fields) {
+            classInfo.put(field.getName() + "Modifiers", Arrays.asList(field.getModifierList().getText().split(" ")));
+            classInfo.put(field.getName() + "Type", Collections.singletonList(field.getType().toString().substring(8)));
+            classInfo.put(field.getName() + "Annotations", Arrays.stream(field.getAnnotations())
+                                                                        .map(PsiAnnotation::getQualifiedName)
+                                                                        .collect(Collectors.toList()));
+        }
+    }
+
     private void analyze() {
         classInfo.put("name", Collections.singletonList(aClass.getQualifiedName()));
         if (aClass.isInterface()) {
@@ -59,6 +70,7 @@ public class ClassAnalyzer {
                     .collect(Collectors.toList()));
         }
         analyzeMethods();
+        analyzeFields();
     }
 
     public Map<String, List<String>> getClassInfo() {

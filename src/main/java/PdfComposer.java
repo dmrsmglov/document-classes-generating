@@ -64,6 +64,15 @@ public class PdfComposer {
         return paragraph;
     }
 
+    private Paragraph composeFieldDeclaration(String fieldName, Map<String, List<String>> classInfo) {
+        Paragraph paragraph = new Paragraph();
+        classInfo.get(fieldName + "Modifiers").stream().map(x -> x + " ").forEach(paragraph::add);
+        paragraph.add(classInfo.get(fieldName + "Type").get(0));
+        paragraph.add(" " + fieldName);
+        return paragraph;
+    }
+
+
     void compose(Map<String, List<String>> classInfo, String basePath) {
         initialize(classInfo.get("name") + ".pdf");
         try {
@@ -71,17 +80,40 @@ public class PdfComposer {
             Paragraph modifiers = composeSimpleParagraph(classInfo.get("modifiers"));
             modifiers.add(classInfo.get("name").get(0));
             document.add(modifiers);
+
             if (!classInfo.get("extends").isEmpty()) {
                 document.add(new Chunk("Extends"));
                 document.add(composeSimpleParagraph(classInfo.get("extends")));
             }
+
             if (!classInfo.get("implements").isEmpty()) {
                 document.add(new Chunk("Implements"));
                 document.add(composeSimpleParagraph(classInfo.get("implements")));
             }
+
+            if (!classInfo.get("constructors").isEmpty()) {
+                document.add(new Chunk("Constructors"));
+                for (String constructor : classInfo.get("constructors")) {
+                    document.add(composeSignature(constructor, classInfo));
+                }
+            }
+
+            if (!classInfo.get("fields").isEmpty()) {
+                document.add(new Chunk("Fields"));
+                for (String fieldName : classInfo.get("fields")) {
+                    for (String annotationName : classInfo.get(fieldName + "Annotations")) {
+                        document.add(new Chunk(annotationName));
+                    }
+                    document.add(composeFieldDeclaration(fieldName, classInfo));
+                }
+            }
+
             if (!classInfo.get("methods").isEmpty()) {
                 document.add(new Chunk("Methods"));
                 for (String methodName : classInfo.get("methods")) {
+                    for (String annotationName : classInfo.get(methodName + "Annotations")) {
+                        document.add(new Chunk(annotationName));
+                    }
                     document.add(composeSignature(methodName, classInfo));
                 }
             }
@@ -90,7 +122,7 @@ public class PdfComposer {
         }
         document.close();
         createDirectoryForDocuments(basePath);
-        file.renameTo(new File(directoryPath.toString() + "/" + classInfo.get("name") + ".pdf"));
-        System.out.println("ready");
+        file.renameTo(new File(directoryPath.toString() + "/" + classInfo.get("name").get(0) + ".pdf"));
+        System.out.println("*****************ready*******************");
     }
 }
