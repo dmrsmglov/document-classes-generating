@@ -42,12 +42,14 @@ public class PdfComposer {
 
     private Paragraph composeSimpleParagraph(List<String> values) {
         Paragraph paragraph = new Paragraph();
+        paragraph.setIndentationLeft(10);
         values.stream().map(x -> x + " ").forEach(paragraph::add);
         return paragraph;
     }
 
     private Paragraph composeSignature(String methodName, Map<String, List<String>> classInfo) {
         Paragraph paragraph = new Paragraph();
+        paragraph.setIndentationLeft(10);
         classInfo.get(methodName + "Modifiers").stream().map(x -> x + " ").forEach(paragraph::add);
         if (classInfo.get(methodName + "ReturnType") != null) {
             paragraph.add(classInfo.get(methodName + "ReturnType").get(0));
@@ -66,6 +68,7 @@ public class PdfComposer {
 
     private Paragraph composeFieldDeclaration(String fieldName, Map<String, List<String>> classInfo) {
         Paragraph paragraph = new Paragraph();
+        paragraph.setIndentationLeft(10);
         classInfo.get(fieldName + "Modifiers").stream().map(x -> x + " ").forEach(paragraph::add);
         paragraph.add(classInfo.get(fieldName + "Type").get(0));
         paragraph.add(" " + fieldName);
