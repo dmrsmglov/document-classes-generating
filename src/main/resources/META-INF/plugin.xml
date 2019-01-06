@@ -1,9 +1,11 @@
 <idea-plugin>
-    <id>ru/plugin/damir.documentation generating</id>
+    <id>ru.plugin.damir.documentation generating</id>
     <name>Document classes generator</name>
-    <vendor email="support@yourcompany.com" url="http://www.yourcompany.com">YourCompany</vendor>
+    <vendor email="damiron123.@gmail.com" url="http://www.yourcompany.com">Damirka</vendor>
 
-    <description></description>
+    <description>
+        Plugin generate pdf with class description
+    </description>
 
 
     <extensions defaultExtensionNs="com.intellij">
