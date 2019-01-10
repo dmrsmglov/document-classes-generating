@@ -1,5 +1,6 @@
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.PdfWriter;
+import gherkin.lexer.Pa;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -9,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class PdfComposer {
     private Document document;
@@ -50,11 +52,17 @@ public class PdfComposer {
     private Paragraph composeSignature(String methodName, Map<String, List<String>> classInfo) {
         Paragraph paragraph = new Paragraph();
         paragraph.setIndentationLeft(10);
-        classInfo.get(methodName + "Modifiers").stream().map(x -> x + " ").forEach(paragraph::add);
+        classInfo.get(methodName + "Modifiers").stream()
+                                                .filter(x -> x.startsWith("@"))
+                                                .forEach(paragraph::add);
+        classInfo.get(methodName + "Modifiers").stream()
+                                                .filter(x -> !x.startsWith("@") && !x.equals(""))
+                                                .map(x -> x + " ")
+                                                .forEach(paragraph::add);
         if (classInfo.get(methodName + "ReturnType") != null) {
             paragraph.add(classInfo.get(methodName + "ReturnType").get(0));
         }
-        paragraph.add(" " + methodName);
+        paragraph.add(" " + methodName.split("#")[0]);
         String parameters = classInfo.get(methodName + "Parameters").stream()
                 .reduce("(", (x, y) -> x + y + ", ");
         if (parameters.length() > 1) {
@@ -69,7 +77,13 @@ public class PdfComposer {
     private Paragraph composeFieldDeclaration(String fieldName, Map<String, List<String>> classInfo) {
         Paragraph paragraph = new Paragraph();
         paragraph.setIndentationLeft(10);
-        classInfo.get(fieldName + "Modifiers").stream().map(x -> x + " ").forEach(paragraph::add);
+        classInfo.get(fieldName + "Modifiers").stream()
+                                                .filter(x -> x.startsWith("@"))
+                                                .forEach(paragraph::add);
+        classInfo.get(fieldName + "Modifiers").stream()
+                                                .filter(x -> !x.startsWith("@") && !x.equals(""))
+                                                .map(x -> x + " ")
+                                                .forEach(paragraph::add);
         paragraph.add(classInfo.get(fieldName + "Type").get(0));
         paragraph.add(" " + fieldName);
         return paragraph;
@@ -80,43 +94,51 @@ public class PdfComposer {
         initialize(classInfo.get("name") + ".pdf");
         try {
             document.addTitle(classInfo.get("name").get(0));
-            Paragraph modifiers = composeSimpleParagraph(classInfo.get("modifiers"));
+            Paragraph classAnnotations = new Paragraph();
+            classInfo.get("modifiers").stream()
+                    .filter(x -> x.startsWith("@"))
+                    .forEach(classAnnotations::add);
+            document.add(classAnnotations);
+            Paragraph modifiers = composeSimpleParagraph(classInfo.get("modifiers").stream()
+                                                                        .filter(x -> !x.equals("") && !x.startsWith("@"))
+                                                                        .collect(Collectors.toList()));
             modifiers.add(classInfo.get("name").get(0));
             document.add(modifiers);
 
+            if (classInfo.get("containClass") != null) {
+                document.add(new Chunk("It's a inner class of " + classInfo.get("containClass").get(0) + "\n"));
+            }
+            if (classInfo.get("innerClasses") != null) {
+                document.add(new Chunk("Inner classes\n"));
+                document.add(composeSimpleParagraph(classInfo.get("innerClasses")));
+            }
             if (!classInfo.get("extends").isEmpty()) {
-                document.add(new Chunk("Extends"));
+                document.add(new Chunk("Extends\n"));
                 document.add(composeSimpleParagraph(classInfo.get("extends")));
             }
 
             if (!classInfo.get("implements").isEmpty()) {
-                document.add(new Chunk("Implements"));
+                document.add(new Chunk("Implements\n"));
                 document.add(composeSimpleParagraph(classInfo.get("implements")));
             }
 
             if (!classInfo.get("constructors").isEmpty()) {
-                document.add(new Chunk("Constructors"));
+                document.add(new Chunk("Constructors\n"));
                 for (String constructor : classInfo.get("constructors")) {
                     document.add(composeSignature(constructor, classInfo));
                 }
             }
 
             if (!classInfo.get("fields").isEmpty()) {
-                document.add(new Chunk("Fields"));
+                document.add(new Chunk("Fields\n"));
                 for (String fieldName : classInfo.get("fields")) {
-                    for (String annotationName : classInfo.get(fieldName + "Annotations")) {
-                        document.add(new Chunk(annotationName));
-                    }
                     document.add(composeFieldDeclaration(fieldName, classInfo));
                 }
             }
 
             if (!classInfo.get("methods").isEmpty()) {
-                document.add(new Chunk("Methods"));
+                document.add(new Chunk("Methods\n"));
                 for (String methodName : classInfo.get("methods")) {
-                    for (String annotationName : classInfo.get(methodName + "Annotations")) {
-                        document.add(new Chunk(annotationName));
-                    }
                     document.add(composeSignature(methodName, classInfo));
                 }
             }
@@ -126,6 +148,5 @@ public class PdfComposer {
         document.close();
         createDirectoryForDocuments(basePath);
         file.renameTo(new File(directoryPath.toString() + "/" + classInfo.get("name").get(0) + ".pdf"));
-        System.out.println("*****************ready*******************");
     }
 }

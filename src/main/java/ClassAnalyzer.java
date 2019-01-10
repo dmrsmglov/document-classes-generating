@@ -16,22 +16,20 @@ public class ClassAnalyzer {
             List<String> casualMethods = new ArrayList<>();
             List<String> constructors = new ArrayList<>();
             for (PsiMethod method : methods) {
+                int methodId = casualMethods.size() + constructors.size();
                 if (method.getReturnType() == null) {
-                    constructors.add(method.getName());
+                    constructors.add(method.getName() + '#' + Integer.toString(methodId));
                 } else {
-                    casualMethods.add(method.getName());
-                    classInfo.put(method.getName() + "ReturnType", Collections.singletonList(method.getReturnType().getCanonicalText()));
+                    casualMethods.add(method.getName() + '#' + Integer.toString(methodId));
+                    classInfo.put(method.getName() + '#' + Integer.toString(methodId) + "ReturnType", Collections.singletonList(method.getReturnType().getCanonicalText()));
                 }
-                classInfo.put(method.getName() + "Modifiers", Arrays.asList(method.getModifierList().getText().split(" ")));
-                classInfo.put(method.getName() + "Parameters",
+                classInfo.put(method.getName() + '#' + Integer.toString(methodId) + "Modifiers", Arrays.asList(method.getModifierList().getText().split(" ")));
+                classInfo.put(method.getName() + '#' + Integer.toString(methodId) + "Parameters",
                         Arrays.stream(method.getParameters())
                                 .map(parameter -> parameter.getType().toString().substring(8) + " " + parameter.getName())
                                 .collect(Collectors.toList()));
-                classInfo.put(method.getName() + "Exceptions", Arrays.stream(method.getThrowsList().getReferencedTypes())
+                classInfo.put(method.getName() + '#' + Integer.toString(methodId) + "Exceptions", Arrays.stream(method.getThrowsList().getReferencedTypes())
                         .map(PsiClassType::getClassName)
-                        .collect(Collectors.toList()));
-                classInfo.put(method.getName() + "Annotations", Arrays.stream(method.getAnnotations())
-                        .map(PsiAnnotation::getQualifiedName)
                         .collect(Collectors.toList()));
             }
             classInfo.put("constructors", constructors);
@@ -46,14 +44,15 @@ public class ClassAnalyzer {
         for (PsiField field : fields) {
             classInfo.put(field.getName() + "Modifiers", Arrays.asList(field.getModifierList().getText().split(" ")));
             classInfo.put(field.getName() + "Type", Collections.singletonList(field.getType().toString().substring(8)));
-            classInfo.put(field.getName() + "Annotations", Arrays.stream(field.getAnnotations())
-                                                                        .map(PsiAnnotation::getQualifiedName)
-                                                                        .collect(Collectors.toList()));
         }
     }
 
     private void analyze() {
         classInfo.put("name", Collections.singletonList(aClass.getQualifiedName()));
+        PsiClass containingClass = aClass.getContainingClass();
+        if (containingClass != null) {
+            classInfo.put("containClass", Collections.singletonList(containingClass.getQualifiedName()));
+        }
         if (aClass.isInterface()) {
             classInfo.put("modifiers", Arrays.asList((aClass.getModifierList().getText() + " interface").split(" ")));
         } else {
@@ -71,6 +70,12 @@ public class ClassAnalyzer {
         }
         analyzeMethods();
         analyzeFields();
+
+        if (aClass.getAllInnerClasses().length != 0) {
+            classInfo.put("innerClasses", Arrays.stream(aClass.getAllInnerClasses())
+                                                    .map(PsiClass::getQualifiedName)
+                                                    .collect(Collectors.toList()));
+        }
     }
 
     public Map<String, List<String>> getClassInfo() {

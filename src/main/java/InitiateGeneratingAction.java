@@ -48,6 +48,11 @@ public class InitiateGeneratingAction extends AnAction {
             PdfComposer pdfComposer = new PdfComposer();
             pdfComposer.compose(analyzer.getClassInfo(), project.getBasePath());
 
+            for (PsiClass innerClass : aClass.getAllInnerClasses()) {
+                ClassAnalyzer innerClassAnalyzer = new ClassAnalyzer(innerClass);
+                PdfComposer innerClassPdfComposer = new PdfComposer();
+                innerClassPdfComposer.compose(innerClassAnalyzer.getClassInfo(), project.getBasePath());
+            }
         } else {
             Notifications.Bus.notify(new Notification("Error", "Cannot generate documentation",
                     "Java class not found " + aClass.getQualifiedName(), NotificationType.ERROR));
