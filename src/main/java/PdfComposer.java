@@ -2,6 +2,8 @@ import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.PdfWriter;
 import gherkin.lexer.Pa;
 
+import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -15,7 +17,6 @@ import java.util.stream.Collectors;
 public class PdfComposer {
     private Document document;
     private File file = new File("kek");
-    private Path directoryPath = Paths.get("kekus");
 
     PdfComposer() {
         document = new Document();
@@ -29,17 +30,6 @@ public class PdfComposer {
             ex.printStackTrace();
         }
         document.open();
-    }
-
-    private void createDirectoryForDocuments(String basePath) {
-        directoryPath = Paths.get(basePath + "/documents");
-        try {
-            if (!Files.exists(directoryPath)) {
-                Files.createDirectory(directoryPath);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     private Paragraph composeSimpleParagraph(List<String> values) {
@@ -90,7 +80,7 @@ public class PdfComposer {
     }
 
 
-    void compose(Map<String, List<String>> classInfo, String basePath) {
+    void compose(Map<String, List<String>> classInfo) {
         initialize(classInfo.get("name") + ".pdf");
         try {
             document.addTitle(classInfo.get("name").get(0));
@@ -146,7 +136,8 @@ public class PdfComposer {
             ex.printStackTrace();
         }
         document.close();
-        createDirectoryForDocuments(basePath);
-        file.renameTo(new File(directoryPath.toString() + "/" + classInfo.get("name").get(0) + ".pdf"));
+
+        FileChooser fileChooser = new FileChooser(classInfo.get("name").get(0));
+        file.renameTo(new File(fileChooser.getDirectoryName() + "/" + fileChooser.getFileName()));
     }
 }

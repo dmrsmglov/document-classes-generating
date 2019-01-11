@@ -15,6 +15,7 @@ import com.intellij.psi.search.GlobalSearchScope;
 
 public class InitiateGeneratingAction extends AnAction {
 
+
     private String composePackage(String currentPackage, PsiDirectory psiDirectory) {
         if (psiDirectory.getName().startsWith("src")) {
             return currentPackage;
@@ -46,12 +47,12 @@ public class InitiateGeneratingAction extends AnAction {
         if (aClass != null) {
             ClassAnalyzer analyzer = new ClassAnalyzer(aClass);
             PdfComposer pdfComposer = new PdfComposer();
-            pdfComposer.compose(analyzer.getClassInfo(), project.getBasePath());
-
-            for (PsiClass innerClass : aClass.getAllInnerClasses()) {
+            pdfComposer.compose(analyzer.getClassInfo());
+            for (PsiClass innerClass : aClass.getInnerClasses()) {
+                System.out.println(innerClass.getQualifiedName());
                 ClassAnalyzer innerClassAnalyzer = new ClassAnalyzer(innerClass);
                 PdfComposer innerClassPdfComposer = new PdfComposer();
-                innerClassPdfComposer.compose(innerClassAnalyzer.getClassInfo(), project.getBasePath());
+                innerClassPdfComposer.compose(innerClassAnalyzer.getClassInfo());
             }
         } else {
             Notifications.Bus.notify(new Notification("Error", "Cannot generate documentation",
