@@ -48,8 +48,7 @@ public class InitiateGeneratingAction extends AnAction {
             ClassAnalyzer analyzer = new ClassAnalyzer(aClass);
             PdfComposer pdfComposer = new PdfComposer();
             pdfComposer.compose(analyzer.getClassInfo());
-            for (PsiClass innerClass : aClass.getInnerClasses()) {
-                System.out.println(innerClass.getQualifiedName());
+            for (PsiClass innerClass : aClass.getInnerClasses()){
                 ClassAnalyzer innerClassAnalyzer = new ClassAnalyzer(innerClass);
                 PdfComposer innerClassPdfComposer = new PdfComposer();
                 innerClassPdfComposer.compose(innerClassAnalyzer.getClassInfo());

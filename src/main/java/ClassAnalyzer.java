@@ -36,6 +36,7 @@ public class ClassAnalyzer {
             classInfo.put("methods", casualMethods);
     }
 
+
     private void analyzeFields() {
         PsiField[] fields = aClass.getFields();
         classInfo.put("fields", Arrays.stream(aClass.getFields())

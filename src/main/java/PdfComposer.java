@@ -10,9 +10,11 @@ import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.joining;
 
 public class PdfComposer {
     private Document document;
@@ -43,12 +45,12 @@ public class PdfComposer {
         Paragraph paragraph = new Paragraph();
         paragraph.setIndentationLeft(10);
         classInfo.get(methodName + "Modifiers").stream()
-                                                .filter(x -> x.startsWith("@"))
-                                                .forEach(paragraph::add);
+                .filter(x -> x.startsWith("@"))
+                .forEach(paragraph::add);
         classInfo.get(methodName + "Modifiers").stream()
-                                                .filter(x -> !x.startsWith("@") && !x.equals(""))
-                                                .map(x -> x + " ")
-                                                .forEach(paragraph::add);
+                .filter(x -> !x.startsWith("@") && !x.equals(""))
+                .map(x -> x + " ")
+                .forEach(paragraph::add);
         if (classInfo.get(methodName + "ReturnType") != null) {
             paragraph.add(classInfo.get(methodName + "ReturnType").get(0));
         }
@@ -56,24 +58,34 @@ public class PdfComposer {
         String parameters = classInfo.get(methodName + "Parameters").stream()
                 .reduce("(", (x, y) -> x + y + ", ");
         if (parameters.length() > 1) {
-            parameters = parameters.substring(0, parameters.length() - 2) + ")";
+            parameters = parameters.substring(0, parameters.length() - 2) + ") ";
         } else {
-            parameters += ")";
+            parameters += ") ";
         }
         paragraph.add(parameters);
+
+        String throwsSection = Optional.of(classInfo.get(methodName + "Exceptions"))
+                .filter(list -> !list.isEmpty())
+                .map(list -> ("throws " + list
+                        .stream()
+                        .collect(joining(", "))))
+                .orElse("");
+
+        paragraph.add(throwsSection);
         return paragraph;
     }
+
 
     private Paragraph composeFieldDeclaration(String fieldName, Map<String, List<String>> classInfo) {
         Paragraph paragraph = new Paragraph();
         paragraph.setIndentationLeft(10);
         classInfo.get(fieldName + "Modifiers").stream()
-                                                .filter(x -> x.startsWith("@"))
-                                                .forEach(paragraph::add);
+                .filter(x -> x.startsWith("@"))
+                .forEach(paragraph::add);
         classInfo.get(fieldName + "Modifiers").stream()
-                                                .filter(x -> !x.startsWith("@") && !x.equals(""))
-                                                .map(x -> x + " ")
-                                                .forEach(paragraph::add);
+                .filter(x -> !x.startsWith("@") && !x.equals(""))
+                .map(x -> x + " ")
+                .forEach(paragraph::add);
         paragraph.add(classInfo.get(fieldName + "Type").get(0));
         paragraph.add(" " + fieldName);
         return paragraph;
@@ -90,8 +102,8 @@ public class PdfComposer {
                     .forEach(classAnnotations::add);
             document.add(classAnnotations);
             Paragraph modifiers = composeSimpleParagraph(classInfo.get("modifiers").stream()
-                                                                        .filter(x -> !x.equals("") && !x.startsWith("@"))
-                                                                        .collect(Collectors.toList()));
+                    .filter(x -> !x.equals("") && !x.startsWith("@"))
+                    .collect(Collectors.toList()));
             modifiers.add(classInfo.get("name").get(0));
             document.add(modifiers);
 
