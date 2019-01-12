@@ -1,10 +1,12 @@
 <idea-plugin>
     <id>ru.plugin.damir.documentation generating</id>
     <name>Document classes generator</name>
-    <vendor email="damiron123.@gmail.com" url="http://www.yourcompany.com">Damirka</vendor>
+    <vendor email="damiron123.@gmail.com" url="https://github.com/dmrsmglov">Damir Ismagilov</vendor>
 
     <description>
-        Plugin generate pdf with class description
+        Plugin generate pdf with class description.
+        Open file with java class in your Idea.
+        Use ToolsMenu or shortcut: control alt g for initialize generating.
     </description>
 
 
