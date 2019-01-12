@@ -1,142 +1,96 @@
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.PdfWriter;
+import di.Injector;
 
+import javax.inject.Inject;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 
-import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.joining;
-
 public class PdfComposer {
-    private Document document;
-    private File file = new File("kek");
+
+    @Inject
+    private FileChooser fileChooser;
 
     PdfComposer() {
-        document = new Document();
+        Injector.getInstance()
+                .getInjector()
+                .injectMembers(this);
     }
 
-    private void initialize(String fileName) {
-        file = new File(fileName);
+    private Document initialize(String fileName) {
+        Document document = new Document();
         try {
             PdfWriter.getInstance(document, new FileOutputStream(fileName));
         } catch (FileNotFoundException | DocumentException ex) {
             ex.printStackTrace();
         }
+
         document.open();
+        return document;
     }
 
     private Paragraph composeSimpleParagraph(List<String> values) {
         Paragraph paragraph = new Paragraph();
         paragraph.setIndentationLeft(10);
-        values.stream().map(x -> x + " ").forEach(paragraph::add);
+        paragraph.add(values.stream().collect(Collectors.joining(", ")));
         return paragraph;
     }
 
-    private Paragraph composeSignature(String methodName, Map<String, List<String>> classInfo) {
-        Paragraph paragraph = new Paragraph();
+    private Paragraph composeSimpleParagraph(String value) {
+        Paragraph paragraph = new Paragraph(value);
         paragraph.setIndentationLeft(10);
-        classInfo.get(methodName + "Modifiers").stream()
-                .filter(x -> x.startsWith("@"))
-                .forEach(paragraph::add);
-        classInfo.get(methodName + "Modifiers").stream()
-                .filter(x -> !x.startsWith("@") && !x.equals(""))
-                .map(x -> x + " ")
-                .forEach(paragraph::add);
-        if (classInfo.get(methodName + "ReturnType") != null) {
-            paragraph.add(classInfo.get(methodName + "ReturnType").get(0));
-        }
-        paragraph.add(" " + methodName.split("#")[0]);
-        String parameters = classInfo.get(methodName + "Parameters").stream()
-                .reduce("(", (x, y) -> x + y + ", ");
-        if (parameters.length() > 1) {
-            parameters = parameters.substring(0, parameters.length() - 2) + ") ";
-        } else {
-            parameters += ") ";
-        }
-        paragraph.add(parameters);
-
-        String throwsSection = Optional.of(classInfo.get(methodName + "Exceptions"))
-                .filter(list -> !list.isEmpty())
-                .map(list -> ("throws " + list
-                        .stream()
-                        .collect(joining(", "))))
-                .orElse("");
-
-        paragraph.add(throwsSection);
         return paragraph;
     }
 
-
-    private Paragraph composeFieldDeclaration(String fieldName, Map<String, List<String>> classInfo) {
-        Paragraph paragraph = new Paragraph();
-        paragraph.setIndentationLeft(10);
-        classInfo.get(fieldName + "Modifiers").stream()
-                .filter(x -> x.startsWith("@"))
-                .forEach(paragraph::add);
-        classInfo.get(fieldName + "Modifiers").stream()
-                .filter(x -> !x.startsWith("@") && !x.equals(""))
-                .map(x -> x + " ")
-                .forEach(paragraph::add);
-        paragraph.add(classInfo.get(fieldName + "Type").get(0));
-        paragraph.add(" " + fieldName);
-        return paragraph;
-    }
-
-
-    void compose(Map<String, List<String>> classInfo) {
-        initialize(classInfo.get("name") + ".pdf");
+    void compose(PdfClass pdfClass) {
+        String fileName = pdfClass.getName() + ".pdf";
+        File file = new File(fileName);
+        Document document = initialize(fileName);
         try {
-            document.addTitle(classInfo.get("name").get(0));
-            Paragraph classAnnotations = new Paragraph();
-            classInfo.get("modifiers").stream()
-                    .filter(x -> x.startsWith("@"))
-                    .forEach(classAnnotations::add);
+            document.addTitle(pdfClass.getName());
+            Paragraph classAnnotations = new Paragraph(pdfClass.getClassAnnotations());
             document.add(classAnnotations);
-            Paragraph modifiers = composeSimpleParagraph(classInfo.get("modifiers").stream()
-                    .filter(x -> !x.equals("") && !x.startsWith("@"))
-                    .collect(Collectors.toList()));
-            modifiers.add(classInfo.get("name").get(0));
+            Paragraph modifiers = new Paragraph(pdfClass.getSignature());
             document.add(modifiers);
-
-            if (classInfo.get("containClass") != null) {
-                document.add(new Chunk("It's a inner class of " + classInfo.get("containClass").get(0) + "\n"));
+            if (pdfClass.getOuterClass() != null) {
+                document.add(new Chunk("It's a inner class of " + pdfClass.getOuterClass() + "\n"));
             }
-            if (classInfo.get("innerClasses") != null) {
+            if (!pdfClass.getInnerClasses().isEmpty()) {
                 document.add(new Chunk("Inner classes\n"));
-                document.add(composeSimpleParagraph(classInfo.get("innerClasses")));
+                document.add(composeSimpleParagraph(pdfClass.getInnerClasses()));
             }
-            if (!classInfo.get("extends").isEmpty()) {
+            if (!pdfClass.getExtending().isEmpty()) {
                 document.add(new Chunk("Extends\n"));
-                document.add(composeSimpleParagraph(classInfo.get("extends")));
+                document.add(composeSimpleParagraph(pdfClass.getExtending()));
             }
 
-            if (!classInfo.get("implements").isEmpty()) {
+            if (!pdfClass.getImplementing().isEmpty()) {
                 document.add(new Chunk("Implements\n"));
-                document.add(composeSimpleParagraph(classInfo.get("implements")));
+                document.add(composeSimpleParagraph(pdfClass.getImplementing()));
             }
 
-            if (!classInfo.get("constructors").isEmpty()) {
+            if (!pdfClass.getConstructors().isEmpty()) {
                 document.add(new Chunk("Constructors\n"));
-                for (String constructor : classInfo.get("constructors")) {
-                    document.add(composeSignature(constructor, classInfo));
+                for (String constructor : pdfClass.getConstructors()) {
+                    document.add(composeSimpleParagraph(constructor));
                 }
             }
 
-            if (!classInfo.get("fields").isEmpty()) {
+            if (!pdfClass.getFields().isEmpty()) {
                 document.add(new Chunk("Fields\n"));
-                for (String fieldName : classInfo.get("fields")) {
-                    document.add(composeFieldDeclaration(fieldName, classInfo));
+                for (String field : pdfClass.getFields()) {
+                    document.add(composeSimpleParagraph(field));
                 }
             }
 
-            if (!classInfo.get("methods").isEmpty()) {
+            if (!pdfClass.getMethods().isEmpty()) {
                 document.add(new Chunk("Methods\n"));
-                for (String methodName : classInfo.get("methods")) {
-                    document.add(composeSignature(methodName, classInfo));
+                for (String method : pdfClass.getMethods()) {
+                    document.add(composeSimpleParagraph(method));
                 }
             }
         } catch (DocumentException ex) {
@@ -144,7 +98,7 @@ public class PdfComposer {
         }
         document.close();
 
-        FileChooser fileChooser = new FileChooser(classInfo.get("name").get(0));
+        fileChooser.createFileDialog(pdfClass.getName());
         file.renameTo(new File(fileChooser.getDirectoryName() + "/" + fileChooser.getFileName()));
     }
 }

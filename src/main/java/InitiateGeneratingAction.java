@@ -11,10 +11,17 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.search.GlobalSearchScope;
+import di.Injector;
+
+import javax.inject.Inject;
 
 
 public class InitiateGeneratingAction extends AnAction {
 
+    @Inject
+    private ClassAnalyzer analyzer;
+    @Inject
+    private PdfComposer pdfComposer;
 
     private String composePackage(String currentPackage, PsiDirectory psiDirectory) {
         if (psiDirectory.getName().startsWith("src")) {
@@ -27,6 +34,7 @@ public class InitiateGeneratingAction extends AnAction {
     public void update(AnActionEvent e) {
         PsiFile psiFile = e.getData(CommonDataKeys.PSI_FILE);
         Presentation presentation = e.getPresentation();
+
         if (psiFile == null || !psiFile.getName().endsWith(".java")) {
             presentation.setEnabled(false);
             presentation.setVisible(false);
@@ -38,6 +46,10 @@ public class InitiateGeneratingAction extends AnAction {
 
     @Override
     public void actionPerformed(AnActionEvent e) {
+        Injector.getInstance()
+                .getInjector()
+                .injectMembers(this);
+
         PsiFile psiFile = e.getData(CommonDataKeys.PSI_FILE);
         Project project = e.getProject();
         String packageName = composePackage("", psiFile.getContainingDirectory());
@@ -45,13 +57,9 @@ public class InitiateGeneratingAction extends AnAction {
         String className = fileName.substring(0, fileName.length() - 5);
         PsiClass aClass = JavaPsiFacade.getInstance(project).findClass(packageName + className, GlobalSearchScope.allScope(project));
         if (aClass != null) {
-            ClassAnalyzer analyzer = new ClassAnalyzer(aClass);
-            PdfComposer pdfComposer = new PdfComposer();
-            pdfComposer.compose(analyzer.getClassInfo());
-            for (PsiClass innerClass : aClass.getInnerClasses()){
-                ClassAnalyzer innerClassAnalyzer = new ClassAnalyzer(innerClass);
-                PdfComposer innerClassPdfComposer = new PdfComposer();
-                innerClassPdfComposer.compose(innerClassAnalyzer.getClassInfo());
+            pdfComposer.compose(analyzer.getClassInfo(aClass));
+            for (PsiClass innerClass : aClass.getInnerClasses()) {
+                pdfComposer.compose(analyzer.getClassInfo(innerClass));
             }
         } else {
             Notifications.Bus.notify(new Notification("Error", "Cannot generate documentation",

@@ -1,86 +1,160 @@
 import com.intellij.psi.*;
 
+import javax.annotation.Nullable;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class ClassAnalyzer {
-    private PsiClass aClass;
-    private Map<String, List<String>> classInfo = new HashMap<>();
 
-    ClassAnalyzer(PsiClass psiClass) {
-        this.aClass = psiClass;
-    }
-
-    private void analyzeMethods() {
-            PsiMethod[] methods = aClass.getMethods();
-            List<String> casualMethods = new ArrayList<>();
-            List<String> constructors = new ArrayList<>();
-            for (PsiMethod method : methods) {
-                int methodId = casualMethods.size() + constructors.size();
-                if (method.getReturnType() == null) {
-                    constructors.add(method.getName() + '#' + Integer.toString(methodId));
-                } else {
-                    casualMethods.add(method.getName() + '#' + Integer.toString(methodId));
-                    classInfo.put(method.getName() + '#' + Integer.toString(methodId) + "ReturnType", Collections.singletonList(method.getReturnType().getCanonicalText()));
+    private List<String> getMethods(PsiClass psiClass) {
+        PsiMethod[] methods = psiClass.getMethods();
+        List<String> casualMethods = new ArrayList<>();
+        for (PsiMethod method : methods) {
+            String signature = "";
+            if (method.getReturnType() != null) {
+                Map<Boolean, List<String>> modifiers =  Arrays.stream(method.getModifierList().getText().split(" "))
+                                    .filter(modifier -> !modifier.equals(""))
+                                    .collect(Collectors.groupingBy(x -> x.startsWith("@")));
+                signature += String.join("", Optional.ofNullable(modifiers.get(true)).orElse(Collections.emptyList()));
+                signature += String.join(" ", Optional.ofNullable(modifiers.get(false)).orElse(Collections.emptyList()));
+                if (modifiers.get(false) != null) {
+                    signature += " ";
                 }
-                classInfo.put(method.getName() + '#' + Integer.toString(methodId) + "Modifiers", Arrays.asList(method.getModifierList().getText().split(" ")));
-                classInfo.put(method.getName() + '#' + Integer.toString(methodId) + "Parameters",
-                        Arrays.stream(method.getParameters())
-                                .map(parameter -> parameter.getType().toString().substring(8) + " " + parameter.getName())
-                                .collect(Collectors.toList()));
-                classInfo.put(method.getName() + '#' + Integer.toString(methodId) + "Exceptions", Arrays.stream(method.getThrowsList().getReferencedTypes())
-                        .map(PsiClassType::getClassName)
-                        .collect(Collectors.toList()));
+                signature += method.getReturnType().getCanonicalText();
+                signature += " " + method.getName();
+                signature += Arrays.stream(method.getParameters())
+                                    .map(parameter -> parameter.getType().toString().substring(8) + " " + parameter.getName())
+                                    .collect(Collectors.joining(", ", "(", ")"));
+                if (method.getThrowsList().getReferencedTypes().length != 0) {
+                    signature += Arrays.stream(method.getThrowsList().getReferencedTypes())
+                            .map(PsiClassType::getClassName)
+                            .collect(Collectors.joining(", ", " throws ", ""));
+                }
+                casualMethods.add(signature);
             }
-            classInfo.put("constructors", constructors);
-            classInfo.put("methods", casualMethods);
-    }
-
-
-    private void analyzeFields() {
-        PsiField[] fields = aClass.getFields();
-        classInfo.put("fields", Arrays.stream(aClass.getFields())
-                                        .map(PsiField::getName)
-                                        .collect(Collectors.toList()));
-        for (PsiField field : fields) {
-            classInfo.put(field.getName() + "Modifiers", Arrays.asList(field.getModifierList().getText().split(" ")));
-            classInfo.put(field.getName() + "Type", Collections.singletonList(field.getType().toString().substring(8)));
         }
+        return casualMethods;
     }
 
-    private void analyze() {
-        classInfo.put("name", Collections.singletonList(aClass.getQualifiedName()));
+
+    public PdfClass getClassInfo(PsiClass aClass) {
+
+        String name = aClass.getQualifiedName();
+        String outerClass = getOuterClass(aClass);
+        String signature = getClassSignature(name, aClass);
+        String classAnnotations = getClassAnnotations(aClass);
+        List<String> fields = getFields(aClass);
+        List<String> constructors = getConstructors(aClass);
+        List<String> methods = getMethods(aClass);
+        List<String> extending = getExtending(aClass);
+        List<String> implementing = getImplementing(aClass);
+        List<String> innerClasses = getInnerClasses(aClass);
+
+        return new PdfClass(name, outerClass, signature, classAnnotations, extending, implementing, fields, constructors, methods, innerClasses);
+    }
+
+    private String getClassAnnotations(PsiClass psiClass) {
+        return Arrays.stream(psiClass.getModifierList().getText().split(" "))
+                        .filter(modifier -> modifier.startsWith("@"))
+                        .collect(Collectors.joining(""));
+    }
+
+    private List<String> getConstructors(PsiClass psiClass) {
+        PsiMethod[] methods = psiClass.getMethods();
+        List<String> constructors = new ArrayList<>();
+        for (PsiMethod method : methods) {
+            String signature = "";
+            if (method.getReturnType() == null) {
+                Map<Boolean, List<String>> modifiers =  Arrays.stream(method.getModifierList().getText().split(" "))
+                        .filter(modifier -> !modifier.equals(""))
+                        .collect(Collectors.groupingBy(x -> x.startsWith("@")));
+                signature += String.join("", Optional.ofNullable(modifiers.get(true)).orElse(Collections.emptyList()));
+                signature += String.join(" ", Optional.ofNullable(modifiers.get(false)).orElse(Collections.emptyList()));
+                if (modifiers.get(false) != null) {
+                    signature += " ";
+                }
+                signature += method.getName();
+                signature += Arrays.stream(method.getParameters())
+                                    .map(parameter -> parameter.getType().toString().substring(8) + " " + parameter.getName())
+                                    .collect(Collectors.joining(", ", "(", ")"));
+                if (method.getThrowsList().getReferencedTypes().length != 0) {
+                    signature += Arrays.stream(method.getThrowsList().getReferencedTypes())
+                                        .map(PsiClassType::getClassName)
+                                        .collect(Collectors.joining(", ", " throws ", ""));
+                }
+                constructors.add(signature);
+            }
+        }
+        return constructors;
+    }
+
+    @Nullable
+    private String getOuterClass(PsiClass aClass) {
         PsiClass containingClass = aClass.getContainingClass();
         if (containingClass != null) {
-            classInfo.put("containClass", Collections.singletonList(containingClass.getQualifiedName()));
+            return containingClass.getQualifiedName();
         }
-        if (aClass.isInterface()) {
-            classInfo.put("modifiers", Arrays.asList((aClass.getModifierList().getText() + " interface").split(" ")));
-        } else {
-            classInfo.put("modifiers", Arrays.asList((aClass.getModifierList().getText() + " class").split(" ")));
-        }
-        if (aClass.getExtendsList() != null) {
-            classInfo.put("extends", Arrays.stream(aClass.getExtendsListTypes())
-                    .map(PsiClassType::getName)
-                    .collect(Collectors.toList()));
-        }
-        if (aClass.getImplementsList() != null) {
-            classInfo.put("implements", Arrays.stream(aClass.getImplementsListTypes())
-                    .map(PsiClassType::getName)
-                    .collect(Collectors.toList()));
-        }
-        analyzeMethods();
-        analyzeFields();
-
-        if (aClass.getAllInnerClasses().length != 0) {
-            classInfo.put("innerClasses", Arrays.stream(aClass.getAllInnerClasses())
-                                                    .map(PsiClass::getQualifiedName)
-                                                    .collect(Collectors.toList()));
-        }
+        return null;
     }
 
-    public Map<String, List<String>> getClassInfo() {
-        analyze();
-        return classInfo;
+    private List<String> getFields(PsiClass aClass) {
+        List<String> fieldsSignature = new ArrayList<>();
+        PsiField[] fields = aClass.getFields();
+        for (PsiField field : fields) {
+            Map<Boolean, List<String>> modifiers = Arrays.stream(field.getModifierList().getText().split(" "))
+                                                            .filter(modifier -> !modifier.isEmpty())
+                                                            .collect(Collectors.groupingBy(modifier -> modifier.startsWith("@")));
+            String signature = "";
+            signature += String.join("", Optional.ofNullable(modifiers.get(true)).orElse(Collections.emptyList()));
+            signature += String.join(" ", Optional.ofNullable(modifiers.get(false)).orElse(Collections.emptyList()));
+            if (modifiers.get(false) != null) {
+                signature += " ";
+            }
+            signature += field.getType().getCanonicalText() + " " + field.getName();
+            fieldsSignature.add(signature);
+        }
+        return fieldsSignature;
+    }
+
+    private String getClassSignature(String name, PsiClass aClass) {
+        String signature = Arrays.stream(aClass.getModifierList().getText().split(" "))
+                                    .filter(modifier -> !modifier.startsWith("@") && !modifier.equals(""))
+                                    .collect(Collectors.joining(" "));
+        if (!signature.isEmpty()) {
+            signature += " ";
+        }
+        if (aClass.isInterface()) {
+            signature += "interface ";
+        } else {
+            signature += "class ";
+        }
+        return signature + name;
+    }
+
+    private List<String> getExtending(PsiClass aClass) {
+        if (aClass.getExtendsList() != null) {
+            return Arrays.stream(aClass.getExtendsListTypes())
+                    .map(PsiClassType::getName)
+                    .collect(Collectors.toList());
+        }
+        return Collections.emptyList();
+    }
+
+    private List<String> getImplementing(PsiClass aClass) {
+        if (aClass.getImplementsList() != null) {
+            return Arrays.stream(aClass.getImplementsListTypes())
+                    .map(PsiClassType::getName)
+                    .collect(Collectors.toList());
+        }
+        return Collections.emptyList();
+    }
+
+    private List<String> getInnerClasses(PsiClass aClass) {
+        if (aClass.getAllInnerClasses().length != 0) {
+            return Arrays.stream(aClass.getAllInnerClasses())
+                    .map(PsiClass::getQualifiedName)
+                    .collect(Collectors.toList());
+        }
+        return Collections.emptyList();
     }
 }

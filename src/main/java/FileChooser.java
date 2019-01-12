@@ -12,7 +12,8 @@ public class FileChooser {
     public String getDirectoryName() {
         return directoryName;
     }
-    FileChooser(String fileName) {
+
+    public void createFileDialog(String fileName) {
         FileDialog fileDialog = new FileDialog(new JFrame(), "Select file to save class document", FileDialog.SAVE);
         fileDialog.setDirectory("\\");
         fileDialog.setFile(fileName + ".pdf");
