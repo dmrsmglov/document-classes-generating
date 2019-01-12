@@ -6,7 +6,7 @@
     <description>
         Plugin generate pdf with class description.
         Open file with java class in your Idea.
-        Use ToolsMenu or shortcut: control alt g for initialize generating.
+        Use ToolsMenu or shortcut: "control alt g" for initialize generating.
     </description>
 
 
