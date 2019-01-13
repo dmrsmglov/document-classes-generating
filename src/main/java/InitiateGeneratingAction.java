@@ -7,7 +7,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.roots.ProjectFileIndex;
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiDirectory;
