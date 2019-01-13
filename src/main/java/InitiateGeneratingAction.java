@@ -1,3 +1,4 @@
+import com.intellij.navigation.ItemPresentation;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationType;
 import com.intellij.notification.Notifications;
@@ -6,6 +7,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.roots.ProjectFileIndex;
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiDirectory;
@@ -22,13 +24,6 @@ public class InitiateGeneratingAction extends AnAction {
     private ClassAnalyzer analyzer;
     @Inject
     private PdfComposer pdfComposer;
-
-    private String composePackage(String currentPackage, PsiDirectory psiDirectory) {
-        if (psiDirectory.getName().startsWith("src")) {
-            return currentPackage;
-        }
-        return composePackage(psiDirectory.getName() + "." + currentPackage, psiDirectory.getParentDirectory());
-    }
 
     @Override
     public void update(AnActionEvent e) {
@@ -52,10 +47,18 @@ public class InitiateGeneratingAction extends AnAction {
 
         PsiFile psiFile = e.getData(CommonDataKeys.PSI_FILE);
         Project project = e.getProject();
-        String packageName = composePackage("", psiFile.getContainingDirectory());
+        PsiDirectory psiFileParent = psiFile.getParent();
+        ItemPresentation presentation = PsiDirectory.class.cast(psiFileParent).getPresentation();
+        String locationString = presentation.getLocationString();
+        if (locationString.endsWith("src")) {
+            locationString = "";
+        } else {
+            locationString += ".";
+        }
         String fileName = psiFile.getName();
         String className = fileName.substring(0, fileName.length() - 5);
-        PsiClass aClass = JavaPsiFacade.getInstance(project).findClass(packageName + className, GlobalSearchScope.allScope(project));
+        PsiClass aClass = JavaPsiFacade.getInstance(project).findClass(locationString + className, GlobalSearchScope.allScope(project));
+
         if (aClass != null) {
             pdfComposer.compose(analyzer.getClassInfo(aClass));
             for (PsiClass innerClass : aClass.getInnerClasses()) {
@@ -63,7 +66,7 @@ public class InitiateGeneratingAction extends AnAction {
             }
         } else {
             Notifications.Bus.notify(new Notification("Error", "Cannot generate documentation",
-                    "Java class not found " + aClass.getQualifiedName(), NotificationType.ERROR));
+                    "Java class not found " + locationString + "." + className, NotificationType.ERROR));
         }
     }
 }
