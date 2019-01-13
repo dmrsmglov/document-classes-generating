@@ -57,7 +57,7 @@ public class PdfComposer {
             Paragraph modifiers = new Paragraph(pdfClass.getSignature());
             document.add(modifiers);
             if (pdfClass.getOuterClass() != null) {
-                document.add(new Chunk("It's a inner class of " + pdfClass.getOuterClass() + "\n"));
+                document.add(new Chunk("It's an inner class of " + pdfClass.getOuterClass() + "\n"));
             }
             if (!pdfClass.getInnerClasses().isEmpty()) {
                 document.add(new Chunk("Inner classes\n"));
