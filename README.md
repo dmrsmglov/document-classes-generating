@@ -9,7 +9,7 @@
 The plugin generates pdf file with class documentation.
 
 Open .java file in your intellij, choose "Generate class document" in Tools Menu or press shortcut "control alt g" for initialize generating.
-The plugin will suggest you choose directory to save file and file name. 
+The plugin will suggest you choose directory and file name to save file. 
 
 For each inner classes the plugin will generate separate pdf file with note about its outer class.
 
